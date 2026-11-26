@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$title — Felis AI 工作區</title>
+    <link rel="apple-touch-icon" href="$app_icon_url">
+    <link rel="icon" type="image/jpeg" href="$app_icon_url">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#111827">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Felis AI">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        $critical_css
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <span>F</span> Felis AI 工作區
+        </div>
+        <ul class="nav-links">
+            $sidebar_html
+        </ul>
+        <div class="sidebar-footer">
+            <a href="/logout" class="btn btn-red" style="width:100%; text-align:center; box-sizing:border-box;">登出系統</a>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="container">
+            $content_html
+        </div>
+    </div>
+</body>
+</html>

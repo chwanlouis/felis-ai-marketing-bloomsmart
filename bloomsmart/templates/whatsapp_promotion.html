@@ -1,0 +1,25 @@
+<h1>WhatsApp 產品推廣</h1>
+<div class="card">
+    <form id="promotion-filter-form" method="GET" action="/whatsapp/promotion">
+        <label for="promotion-filter-type-select">按產品類別篩選</label>
+        <select id="promotion-filter-type-select" name="filter_type"
+                onchange="document.getElementById('promotion-filter-form').submit();">
+            <option value="all" {% if filter_type == "all" %}selected{% endif %}>所有類別</option>
+            {% for product_type in product_types %}
+            <option value="{{ product_type }}" {% if filter_type == product_type %}selected{% endif %}>
+                {{ product_type }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="card">
+    <h3 class="whatsapp-preview-title">產生的 WhatsApp 推廣訊息預覽</h3>
+    <textarea rows="14" readonly class="whatsapp-preview">{{ promotion_text }}</textarea>
+    <div class="whatsapp-actions">
+        <a href="{{ whatsapp_link }}" target="_blank" class="btn btn-blue">
+            <span>💬</span> 透過 WhatsApp 發送
+        </a>
+    </div>
+</div>

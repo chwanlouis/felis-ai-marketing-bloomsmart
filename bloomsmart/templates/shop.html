@@ -1,0 +1,134 @@
+{% if page_kind == "shop" %}
+<div class="shop-header">
+    <div><h1>網上商店</h1><p>選擇產品加入購物車。</p></div>
+    <a class="btn btn-green shop-cart-button" href="/shop/cart" aria-label="購物車">🛒 購物車</a>
+</div>
+<nav class="shop-filter">
+    <a class="btn {% if selected_type == 'all' %}btn-blue active{% else %}btn-gray{% endif %}"
+       href="/shop/all">全部</a>
+    {% for product_type in product_types %}
+    <a class="btn {% if selected_type == product_type %}btn-blue active{% else %}btn-gray{% endif %}"
+       href="/shop/{{ product_type|urlencode }}">{{ product_type }}</a>
+    {% endfor %}
+</nav>
+<div class="shop-grid">
+    {% for product in products %}
+    <article class="shop-product-card">
+        <div class="shop-product-image-wrap">
+            {% if product.photo_url %}
+            <img src="{{ product.photo_url }}" alt="{{ product.name }}" class="shop-product-image">
+            {% else %}<div class="shop-product-placeholder">暫無圖片</div>{% endif %}
+        </div>
+        <div class="shop-product-body">
+            <h3>{{ product.name }}</h3>
+            <div class="shop-product-en">{{ product.en_name }}</div>
+            <p>{{ product.description }}</p>
+            <div class="shop-product-price">${{ product.price }} / {{ product.unit }}</div>
+            <form action="/shop/cart/add" method="post" class="shop-add-form">
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                <input type="number" name="quantity" value="1" min="{{ product.quantity_step }}"
+                       max="99" step="{{ product.quantity_step }}" aria-label="數量">
+                <button class="btn btn-blue" type="submit">加入購物車</button>
+            </form>
+        </div>
+    </article>
+    {% else %}<p>此類別暫無產品。</p>{% endfor %}
+</div>
+
+{% elif page_kind == "cart" %}
+<h1>購物車</h1>
+<a class="btn btn-blue" href="/shop/all">繼續購物</a>
+<div class="card shop-cart-panel">
+    <table class="shop-cart-table">
+        <thead><tr><th>產品</th><th>單價</th><th>數量</th><th>小計</th><th>操作</th></tr></thead>
+        <tbody>
+        {% for line in lines %}
+        <tr>
+            <td>{{ line.name }}{% if line.is_suspended %} <span class="suspended-label">停售</span>{% endif %}</td><td>${{ line.unit_price }}</td>
+            <td><form action="/shop/cart/update" method="post">
+                <input type="hidden" name="product_id" value="{{ line.product_id }}">
+                <input class="shop-quantity-input" type="number" name="quantity"
+                       value="{{ line.quantity }}" min="0" max="99" step="{{ line.quantity_step }}">
+                <button class="btn btn-blue btn-sm">更新</button>
+            </form></td>
+            <td>${{ line.subtotal }}</td>
+            <td><form action="/shop/cart/delete" method="post">
+                <input type="hidden" name="product_id" value="{{ line.product_id }}">
+                <button class="btn btn-red btn-sm" type="submit">刪除</button>
+            </form></td>
+        </tr>
+        {% else %}<tr><td colspan="5">購物車是空的。</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    <h2 class="shop-cart-total">總額：${{ total }}</h2>
+    {% if has_suspended %}
+    <p class="suspended-label">購物車內有停售產品，請移除後才能提交訂單。</p>
+    {% endif %}
+    {% if lines and not has_suspended %}
+    <form action="/shop/checkout" method="post" class="shop-checkout-form">
+        {% if customer_options %}
+        <label for="target_user_id">為客戶建立訂單</label>
+        <select id="target_user_id" name="target_user_id" required>
+            <option value="">請選擇客戶</option>
+            {% for customer in customer_options %}
+            <option value="{{ customer.user_id }}">{{ customer.username }}{% if customer.email %} ({{ customer.email }}){% endif %}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <button class="btn btn-green">提交訂單</button>
+    </form>
+    {% endif %}
+</div>
+
+{% elif page_kind == "customer_orders" %}
+<h1>我的訂單</h1>
+<a class="btn btn-blue" href="/shop/all">返回商店</a>
+<div class="shop-order-cards">
+{% for order in orders %}
+<article class="card">
+    <div class="shop-order-heading"><strong>訂單 {{ order.short_id }}</strong><span>{{ order.created_at }}</span></div>
+    <p>{% for item in order["items"] %}{{ item.name }}{% if item.quantity is not none %}（數量：{{ item.quantity }}）{% endif %}{% if item.actual_weight is not none %}（總重量：{{ item.actual_weight }} {{ item.weight_unit }}）{% endif %}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+    <p>總額：${{ order.total }}　狀態：{{ order.status_label }}</p>
+    <a class="btn btn-blue btn-sm" href="/shop/orders/{{ order.order_id }}">查看詳情</a>
+</article>
+{% else %}<div class="card">暫無訂單。</div>{% endfor %}
+</div>
+
+{% elif page_kind == "order_confirmation" %}
+<h1>訂單詳情</h1>
+<div class="card order-detail-card">
+    <div class="order-detail-header"><h2>訂單編號：{{ order.order_id }}</h2><span>狀態：{{ order.status_label }}</span></div>
+    <div class="order-items-table"><table>
+        <thead><tr><th>產品名稱</th><th>數量</th><th>小計</th></tr></thead>
+        <tbody>{% for item in order["items"] %}<tr><td><div class="order-item-product">
+            {% if item.photo_url %}<img class="order-item-image" src="{{ item.photo_url }}" alt="{{ item.name }}">
+            {% else %}<span class="order-item-image-placeholder">無圖片</span>{% endif %}
+            <span>{{ item.name }}{% if item.actual_weight is not none %}<br><small>總重量：{{ item.actual_weight }} {{ item.weight_unit }}</small>{% endif %}</span>
+        </div></td><td>{{ item.quantity }}</td><td>${{ item.line_total }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    <h2 class="order-detail-total">總額：${{ order.total }}</h2>
+    <a class="btn btn-blue" href="/shop/orders">返回我的訂單</a>
+</div>
+
+{% elif page_kind == "admin_orders" %}
+<h1>訂單管理</h1>
+<div class="card admin-orders-table"><table>
+    <tr><th>訂單</th><th>客戶</th><th>產品及重量</th><th>總額</th><th>狀態</th></tr>
+    {% for order in orders %}<tr>
+        <td>{{ order.short_id }}</td><td>{{ order.username }}</td>
+        <td><form action="/orders/{{ order.order_id }}/weight" method="post">
+            <table><tr><th>產品</th><th>重量/數量</th><th>單位</th></tr>
+            {% for item in order["items"] %}<tr><td>{{ item.name }}{% if item.actual_weight is not none %}<br><small>已記錄：{{ item.actual_weight }} {{ item.weight_unit }}</small>{% endif %}</td>
+                <td><input type="number" name="actual_weight" min="0.001" step="0.001" value="{{ item.actual_weight or '' }}" required></td>
+                <td>{{ item.unit }}</td></tr>{% endfor %}
+            </table>
+            <button class="btn btn-blue btn-sm" type="submit" {% if order.status != "pending" %}disabled{% endif %}>更新最終重量</button>
+        </form></td>
+        <td>${{ order.total }}</td>
+        <td><form action="/orders/{{ order.order_id }}/status" method="post">
+            <select name="status">{% for value, label in statuses %}<option value="{{ value }}" {% if value == order.status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+            <button class="btn btn-blue btn-sm">更新</button>
+        </form></td>
+    </tr>{% else %}<tr><td colspan="5">暫無訂單。</td></tr>{% endfor %}
+</table></div>
+{% endif %}

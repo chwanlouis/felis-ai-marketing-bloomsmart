@@ -1,0 +1,45 @@
+name: Initialize Bloomsmart Admin User
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type INITIALIZE to confirm the admin user write"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  initialize-admin:
+    if: ${{ github.event.inputs.confirmation == 'INITIALIZE' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install migration dependencies
+        run: python -m pip install --quiet boto3 argon2-cffi pydantic
+
+      - name: Initialize admin user in DynamoDB
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          BLOOMSMART_DYNAMODB_TABLE_USER: ${{ secrets.BLOOMSMART_DYNAMODB_TABLE_USER }}
+          BLOOMSMART_ADMIN_USERNAME: ${{ secrets.BLOOMSMART_ADMIN_USERNAME }}
+          BLOOMSMART_ADMIN_EMAIL: ${{ secrets.BLOOMSMART_ADMIN_EMAIL }}
+          BLOOMSMART_ADMIN_PASSWORD: ${{ secrets.BLOOMSMART_ADMIN_PASSWORD }}
+          BLOOMSMART_ADMIN_PHONE_NUMBER: ${{ secrets.BLOOMSMART_ADMIN_PHONE_NUMBER }}
+        run: python aws-lambda/scripts/seed_admin.py

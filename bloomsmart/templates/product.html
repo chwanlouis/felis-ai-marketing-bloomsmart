@@ -1,0 +1,226 @@
+<h1>產品目錄管理</h1>
+
+<div class="card">
+    <h3>新增產品</h3>
+    <form action="/products/add" method="POST" enctype="multipart/form-data">
+        <div class="form-grid-2">
+            <div><label>中文名稱</label><input type="text" name="cn_name" required></div>
+            <div><label>英文名稱 (English Name)</label><input type="text" name="en_name" required></div>
+        </div>
+        <label>產品描述 (Product Description)</label>
+        <textarea name="product_description" rows="2"></textarea>
+        <label>營銷策略 (Marketing Strategy)</label>
+        <textarea name="marketing_strategy" rows="3"></textarea>
+        <label>產品分類 (可多選)</label>
+        <div class="chips-container">
+            {% for product_type in product_types %}
+            <label class="chip-item"><input type="checkbox" name="product_type"
+                value="{{ product_type }}"><span>{{ product_type }}</span></label>
+            {% endfor %}
+        </div>
+        <div class="form-grid-2">
+            <div><label>計量單位 (Unit)</label>
+                <select name="unit" required><option value="" disabled selected>請選擇單位</option>
+                    {% for unit in units %}<option value="{{ unit }}">{{ unit }}</option>{% endfor %}
+                </select>
+            </div>
+            <div><label>單價 ($)</label><input type="number" step="0.01" name="price" required></div>
+        </div>
+        <label>產品相片</label><input type="file" name="photos" accept="image/*" multiple>
+        <button type="submit" class="btn-blue">儲存產品</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>篩選產品</h3>
+    <div class="form-grid-2">
+        <div><label for="product-search-input">搜尋產品</label>
+            <input id="product-search-input" type="text" oninput="applyProductFilters()"></div>
+        <div><label for="product-category-filter">產品分類</label>
+            <select id="product-category-filter" onchange="applyProductFilters()">
+                <option value="all">所有分類</option>
+                {% for product_type in product_types %}
+                <option value="{{ product_type }}">{{ product_type }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <h3>產品</h3><span id="product-count-display">共 {{ products|length }} 項產品</span>
+    </div>
+    <div class="product-grid">
+        {% for product in products %}
+        <div class="product-card" data-category="{{ product.product_type }}"
+             data-search="{{ product.search_terms }}">
+            <div class="product-card-img-wrap">
+                {% if product.photo_urls %}
+                <img src="{{ product.photo_urls[0] }}" class="product-card-img" alt="{{ product.display_name }}">
+                {% else %}<div class="product-card-no-img">無相片</div>{% endif %}
+                <div class="product-type-badges">
+                    {% for product_type in product.types %}
+                    <span class="product-badge-type">{{ product_type }}</span>
+                    {% endfor %}
+                </div>
+                {% if "清真食品" in product.types %}
+                <img class="halal-food-badge" src="/static/green-halal-food.avif" alt="清真食品">
+                {% endif %}
+            </div>
+            <div class="product-card-body">
+                <h4 class="product-title-cn">{{ product.cn_name or product.en_name }}</h4>
+                {% if product.cn_name %}<div class="product-title-en">{{ product.en_name }}</div>{% endif %}
+                {% if product.description %}<div class="product-desc">{{ product.description }}</div>{% endif %}
+                <div class="product-price-row"><div class="product-price-val">${{ product.price_display }}</div>
+                    <div class="product-unit-tag">/ {{ product.unit }}</div></div>
+                <div class="product-actions">
+                    <button type="button" class="btn btn-purple btn-sm"
+                            data-product-id="{{ product.id }}"
+                            data-product="{{ product|tojson|forceescape }}"
+                            onclick="openEditModal(this)">編輯</button>
+                    <form action="/products/delete/{{ product.id }}" method="POST"
+                          onsubmit="return confirm('確定要刪除「{{ product.display_name }}」嗎？');">
+                        <button type="submit" class="btn btn-red btn-sm">刪除</button>
+                    </form>
+                    <form action="/products/suspend/{{ product.id }}" method="POST"
+                          onsubmit="toggleProductSuspension(event, this)">
+                        <button type="submit" class="btn btn-sm {% if product.is_suspend %}btn-green{% else %}btn-amber{% endif %}"
+                                data-suspend-button>
+                            {% if product.is_suspend %}恢復販售{% else %}停售{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:#64748b;">暫無產品資料。</div>
+        {% endfor %}
+    </div>
+    <div id="no-search-results" style="display:none;text-align:center;padding:40px;color:#64748b;">
+        找不到符合篩選條件的產品。
+    </div>
+</div>
+
+<div id="edit-modal" class="modal-backdrop">
+    <div class="modal-card">
+        <div class="modal-header"><h3 class="modal-title">編輯產品</h3>
+            <button type="button" class="modal-close" onclick="closeEditModal()">&times;</button></div>
+        <form id="edit-product-form" method="POST" enctype="multipart/form-data">
+            <input type="hidden" id="edit-existing-photos-input" name="existing_photos">
+            <div class="form-grid-2">
+                <div><label for="edit-cn-name">中文名稱</label>
+                    <input type="text" id="edit-cn-name" name="cn_name" required></div>
+                <div><label for="edit-en-name">英文名稱 (English Name)</label>
+                    <input type="text" id="edit-en-name" name="en_name" required></div>
+            </div>
+            <label for="edit-product-description">產品描述 (Product Description)</label>
+            <textarea id="edit-product-description" name="product_description" rows="2"></textarea>
+            <label for="edit-marketing-strategy">營銷策略 (Marketing Strategy)</label>
+            <textarea id="edit-marketing-strategy" name="marketing_strategy" rows="3"></textarea>
+            <label>產品分類 (可多選)</label>
+            <div class="chips-container">
+                {% for product_type in product_types %}
+                <label class="chip-item"><input type="checkbox" name="product_type"
+                    value="{{ product_type }}" class="edit-type-checkbox"><span>{{ product_type }}</span></label>
+                {% endfor %}
+            </div>
+            <div class="form-grid-2">
+                <div><label for="edit-unit">計量單位 (Unit)</label>
+                    <select id="edit-unit" name="unit" required>
+                        {% for unit in units %}<option value="{{ unit }}">{{ unit }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div><label for="edit-price">單價 ($)</label>
+                    <input type="number" step="0.01" id="edit-price" name="price" required>
+                </div>
+            </div>
+            <label>產品相片</label>
+            <div class="photos-wall" id="edit-photos-wall"></div>
+            <input type="file" id="edit-photo-file-input" name="photos" accept="image/*"
+                   multiple hidden onchange="renderPhotosWall()">
+            <button type="button" class="btn btn-gray" onclick="closeEditModal()">取消</button>
+            <button type="submit" class="btn btn-blue">儲存變更</button>
+        </form>
+    </div>
+</div>
+
+<script>
+var currentExistingPhotoUrls = [];
+function openEditModal(button) {
+    var product = JSON.parse(button.getAttribute('data-product'));
+    document.getElementById('edit-product-form').action = '/products/edit/' + encodeURIComponent(product.id);
+    document.getElementById('edit-cn-name').value = product.cn_name || '';
+    document.getElementById('edit-en-name').value = product.en_name || '';
+    document.getElementById('edit-product-description').value = product.product_description || '';
+    document.getElementById('edit-marketing-strategy').value = product.marketing_strategy || '';
+    document.getElementById('edit-price').value = product.price || '';
+    document.getElementById('edit-unit').value = (product.unit || '').trim();
+    var selected = (product.product_type || '').split('|').map(function(value) { return value.trim(); });
+    document.querySelectorAll('.edit-type-checkbox').forEach(function(checkbox) {
+        checkbox.checked = selected.indexOf(checkbox.value) !== -1;
+    });
+    currentExistingPhotoUrls = (product.photo_url || '').split('|').filter(Boolean);
+    renderPhotosWall();
+    document.getElementById('edit-modal').classList.add('active');
+}
+function renderPhotosWall() {
+    var wall = document.getElementById('edit-photos-wall');
+    wall.innerHTML = '';
+    currentExistingPhotoUrls.forEach(function(url, index) {
+        var item = document.createElement('div');
+        item.className = 'photo-thumb-item';
+        item.innerHTML = '<img src="' + url + '"><button type="button" class="photo-delete-btn">×</button>';
+        item.querySelector('button').onclick = function() {
+            currentExistingPhotoUrls.splice(index, 1); renderPhotosWall();
+        };
+        wall.appendChild(item);
+    });
+    var add = document.createElement('button');
+    add.type = 'button'; add.className = 'photo-add-btn'; add.textContent = '+';
+    add.onclick = function() { document.getElementById('edit-photo-file-input').click(); };
+    wall.appendChild(add);
+    document.getElementById('edit-existing-photos-input').value = currentExistingPhotoUrls.join('|');
+}
+function closeEditModal() { document.getElementById('edit-modal').classList.remove('active'); }
+async function toggleProductSuspension(event, form) {
+    event.preventDefault();
+    var button = form.querySelector('[data-suspend-button]');
+    button.disabled = true;
+    try {
+        var response = await fetch(form.action, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!response.ok) {
+            throw new Error('Unable to update product availability.');
+        }
+        var result = await response.json();
+        button.classList.toggle('btn-amber', !result.is_suspend);
+        button.classList.toggle('btn-green', result.is_suspend);
+        button.textContent = result.is_suspend ? '恢復販售' : '停售';
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        button.disabled = false;
+    }
+}
+function applyProductFilters() {
+    var query = document.getElementById('product-search-input').value.trim().toLowerCase();
+    var category = document.getElementById('product-category-filter').value;
+    var cards = document.querySelectorAll('.product-grid .product-card'), visible = 0;
+    cards.forEach(function(card) {
+        var categories = (card.dataset.category || '').split('|').map(function(value) { return value.trim(); });
+        var matches = (!query || (card.dataset.search || '').indexOf(query) !== -1) &&
+            (category === 'all' || categories.indexOf(category) !== -1);
+        card.style.display = matches ? '' : 'none'; if (matches) visible++;
+    });
+    document.getElementById('product-count-display').textContent = '顯示 ' + visible + ' 項產品';
+    document.getElementById('no-search-results').style.display = visible ? 'none' : 'block';
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var editId = new URLSearchParams(window.location.search).get('edit_id');
+    var button = editId && document.querySelector('[data-product-id="' + editId + '"]');
+    if (button) openEditModal(button);
+});
+</script>

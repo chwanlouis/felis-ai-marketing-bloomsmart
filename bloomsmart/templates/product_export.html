@@ -1,0 +1,86 @@
+<div class="card product-export-page">
+    <h1>產品目錄 PDF</h1>
+    <p>選擇產品分類後下載產品目錄 PDF。</p>
+    <div class="product-export-actions">
+        <label for="product-export-type">產品分類</label>
+        <select id="product-export-type" onchange="updateProductExportLink()">
+            <option value="all">全部產品</option>
+            {% for product_type in product_types %}
+            <option value="{{ product_type }}">{{ product_type }}</option>
+            {% endfor %}
+        </select>
+        <a id="product-export-link" class="btn btn-blue"
+           href="/product/exportPdf/all" onclick="downloadProductPdf(event, this)">下載 PDF</a>
+    </div>
+</div>
+
+<script>
+var productPdfProgressTimer = null;
+
+function updateProductExportLink() {
+    var selectedType = document.getElementById('product-export-type').value;
+    document.getElementById('product-export-link').href =
+        '/product/exportPdf/' + encodeURIComponent(selectedType);
+}
+
+function updateProductPdfButton(button, progress) {
+    button.textContent = '生成 PDF ' + progress + '%';
+}
+
+async function downloadProductPdf(event, button) {
+    event.preventDefault();
+    if (button.dataset.downloading === 'true') return;
+
+    button.dataset.downloading = 'true';
+    button.classList.add('is-loading');
+    button.setAttribute('aria-busy', 'true');
+    button.setAttribute('aria-disabled', 'true');
+    var progress = 5;
+    updateProductPdfButton(button, progress);
+    productPdfProgressTimer = setInterval(function() {
+        if (progress < 90) {
+            progress += progress < 60 ? 5 : 2;
+            updateProductPdfButton(button, progress);
+        }
+    }, 250);
+
+    try {
+        var response = await fetch(button.href, {
+            headers: { 'Accept': 'application/pdf' }
+        });
+        if (!response.ok) {
+            throw new Error((await response.text()) || 'PDF 下載失敗。');
+        }
+        var contentType = response.headers.get('content-type') || '';
+        if (contentType.indexOf('application/pdf') === -1) {
+            throw new Error('伺服器沒有返回 PDF 檔案。');
+        }
+        var blob = await response.blob();
+        clearInterval(productPdfProgressTimer);
+        productPdfProgressTimer = null;
+        updateProductPdfButton(button, 100);
+
+        var downloadUrl = URL.createObjectURL(blob);
+        var download = document.createElement('a');
+        download.href = downloadUrl;
+        download.download = 'product-catalog.pdf';
+        document.body.appendChild(download);
+        download.click();
+        download.remove();
+        URL.revokeObjectURL(downloadUrl);
+        setTimeout(function() {
+            button.textContent = '下載 PDF';
+        }, 800);
+    } catch (error) {
+        clearInterval(productPdfProgressTimer);
+        productPdfProgressTimer = null;
+        button.textContent = '下載 PDF';
+        alert(error.message);
+    } finally {
+        button.dataset.downloading = 'false';
+        button.classList.remove('is-loading');
+        button.removeAttribute('aria-busy');
+        button.removeAttribute('aria-disabled');
+    }
+}
+</script>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>註冊 — Felis AI 工作區</title>
+    <link rel="apple-touch-icon" href="$app_icon_url">
+    <link rel="icon" type="image/jpeg" href="$app_icon_url">
+    <style>$critical_css</style>
+</head>
+<body class="auth-wrapper">
+    <div class="auth-card">
+        <h1>註冊 Felis AI</h1>
+        $error_block
+        <form action="/register" method="POST">
+            <label for="username">使用者名稱</label>
+            <input type="text" id="username" name="username" minlength="1" required autofocus>
+            <label for="email">電郵地址</label>
+            <input type="email" id="email" name="email">
+            <label for="password">密碼</label>
+            <input type="password" id="password" name="password" minlength="8" required>
+            <label for="phone_number">WhatsApp 手機號碼</label>
+            <input type="tel" id="phone_number" name="phone_number" placeholder="61234567" pattern="[0-9]{8}" title="請輸入 8 位香港手機號碼，例如 61234567" maxlength="8" minlength="8" inputmode="numeric" required>
+            <button type="submit" class="btn-blue" style="width:100%;">註冊</button>
+        </form>
+        <p><a href="/">返回登入</a></p>
+    </div>
+</body>
+</html>

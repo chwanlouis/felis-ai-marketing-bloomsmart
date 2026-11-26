@@ -1,0 +1,36 @@
+name: Deploy Target Folder to AWS Lambda felis-ai-marketing-bloomsmart-crm-uat
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      # Trigger workflow only when files inside your specific folder change
+      - 'bloomsmart/**'
+
+jobs:
+  deploy:
+    name: Package and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Package Target Directory
+        run: |
+          cd bloomsmart
+          zip -r ../../aws-lambda-bloomsmart.zip .
+
+      - name: Deploy to AWS Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name felis-ai-marketing-bloomsmart-crm-uat \
+            --zip-file fileb://aws-lambda-bloomsmart.zip

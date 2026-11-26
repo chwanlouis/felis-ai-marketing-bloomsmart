@@ -1,0 +1,64 @@
+<h1>客戶管理</h1>
+
+<div class="card">
+    <form method="get" action="/customers" class="customer-search-form">
+        <label for="customer-search">搜尋客戶</label>
+        <div class="customer-search-controls">
+            <input id="customer-search" type="search" name="q" value="{{ query }}"
+                   placeholder="搜尋名稱、電郵、電話或客戶 ID"
+                   oninput="applyCustomerFilter()">
+            <button type="submit" class="btn btn-blue">搜尋</button>
+            {% if query %}<a href="/customers" class="btn btn-gray">清除</a>{% endif %}
+        </div>
+    </form>
+</div>
+
+<div class="card customer-results">
+    <div class="customer-results-heading">
+        <h3>客戶</h3>
+        <span id="customer-count">{{ customers|length }} 位</span>
+    </div>
+    <div class="customer-table-wrapper">
+        <table class="customer-table">
+            <thead>
+                <tr><th>用戶名稱</th><th>電郵</th><th>電話</th><th>狀態</th><th>客戶 ID</th></tr>
+            </thead>
+            <tbody>
+            {% for customer in customers %}
+            <tr class="customer-row"
+                data-search="{{ customer.username }} {{ customer.email }} {{ customer.phone_number }} {{ customer.user_id }}">
+                <td>{{ customer.username }}</td>
+                <td>{{ customer.email or "—" }}</td>
+                <td>{{ customer.phone_number or "—" }}</td>
+                <td>
+                    {% if customer.is_active %}
+                    <span class="customer-status-active">啟用</span>
+                    {% else %}
+                    <span class="customer-status-inactive">停用</span>
+                    {% endif %}
+                </td>
+                <td><code>{{ customer.user_id }}</code></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5">找不到符合條件的客戶。</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    function applyCustomerFilter() {
+        var query = document.getElementById('customer-search').value.trim().toLowerCase();
+        var rows = document.querySelectorAll('.customer-row');
+        var visible = 0;
+        rows.forEach(function(row) {
+            var matches = !query || (row.dataset.search || '').toLowerCase().indexOf(query) !== -1;
+            row.style.display = matches ? '' : 'none';
+            if (matches) visible++;
+        });
+        document.getElementById('customer-count').textContent = visible + ' 位';
+    }
+
+    document.addEventListener('DOMContentLoaded', applyCustomerFilter);
+    </script>
+</div>
