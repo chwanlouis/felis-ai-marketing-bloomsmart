@@ -27,7 +27,7 @@ jobs:
       - name: Package Target Directory
         run: |
           cd bloomsmart
-          zip -r ../../aws-lambda-bloomsmart.zip .
+          zip -r ../aws-lambda-bloomsmart.zip .
 
       - name: Deploy to AWS Lambda
         run: |
