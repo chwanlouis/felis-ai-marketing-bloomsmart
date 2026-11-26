@@ -26,11 +26,12 @@ jobs:
 
       - name: Package Target Directory
         run: |
-          cd bloomsmart
-          zip -r ../aws-lambda-bloomsmart.zip .
+          cd "$GITHUB_WORKSPACE/bloomsmart"
+          zip -r "$GITHUB_WORKSPACE/aws-lambda-bloomsmart.zip" .
+          test -s "$GITHUB_WORKSPACE/aws-lambda-bloomsmart.zip"
 
       - name: Deploy to AWS Lambda
         run: |
           aws lambda update-function-code \
             --function-name felis-ai-marketing-bloomsmart-crm-uat \
-            --zip-file fileb://aws-lambda-bloomsmart.zip
+            --zip-file "fileb://$GITHUB_WORKSPACE/aws-lambda-bloomsmart.zip"
