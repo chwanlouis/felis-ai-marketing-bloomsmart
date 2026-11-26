@@ -69,7 +69,6 @@ app.include_router(whatsapp_router)
 app.include_router(shop_router)
 app.include_router(customers_router)
 
-# Initialize Mangum handler
 handler = Mangum(app)
 
 
